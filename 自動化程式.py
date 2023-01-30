@@ -8,7 +8,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-gc = pygsheets.authorize(service_account_file = 'C:/Users/\gtseng1/Downloads/coral-silicon-357507-03bb260c269b.json')  #找api授權檔
+gc = pygsheets.authorize(service_account_file = 'C:/Users/\gtseng1/Downloads/elite-advice-370803-1d67b30a02f1.json')  #找api授權檔
+#elite-advice-370803-1d67b30a02f1.json
+#coral-silicon-357507-03bb260c269b.json
 survey_url = 'https://docs.google.com/spreadsheets/d/1SMbiVpGYMaM9H5Hu0gWJbAvUGRdnHx3ySDioe0OVzyM/edit?usp=sharing'    #連到自己的紀錄表單
 backup_url = 'https://docs.google.com/spreadsheets/d/15ZCQzmNq3UIyEEJR7Jdpvym4UlIFeSYvne-yp90eGko/edit?usp=sharing'    #連到備份表單
 
@@ -17,7 +19,7 @@ sht = gc.open_by_url(survey_url)  #打開紀錄表單
 wks = sht[0]             #第一個sheet
 other_payments = sht[1]  #第二個sheet是補款紀錄
 other_payments.clear()   #清除之前的補款紀錄
-total_list = wks.get_values('A2','F41')  #將第一個sheet的A欄到F欄的參數存成list 等等跑網頁會用到
+total_list = wks.get_values('A2','F48')  #將第一個sheet的A欄到F欄的參數存成list 等等跑網頁會用到
 print(total_list)                        #檢查用 看有沒有空list出現
 
 
@@ -27,9 +29,9 @@ driver = webdriver.Chrome("C:/Users/gtseng1/Desktop/chromedriver.exe")   #打開
 
 
 for i in range(len(total_list)):  #在70秒內成功登入後開始自動跑list迴圈  就可以放著ㄌ
-    url = "https://restaurant.uberinternal.com/manager/payments?restaurantUUID=" + total_list[i][5] + '&start=' + total_list[i][3] + '&end=' + total_list[i][4] + '&rangeType=0'
+    url = "https://restaurant.uberinternal.com/manager/payments?restaurantUUID=" + total_list[i][5] + '&start=' + total_list[i][3] + '&end=' + total_list[i][4] + '&rangeType=1'
     driver.get(url)
-    wait = WebDriverWait(driver, 70).until(EC.presence_of_element_located((By.XPATH, '//*[@id="wrapper"]/div[1]/div[2]/div[2]/div[2]/div/div[5]/div[2]')))
+    wait = WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div/div[1]/div[2]/div[2]/div[2]/div/div[2]/div[3]/div[3]/div[2]')))
 
     #把原先沒有顯示的明細點開
     find_tag_li = driver.find_elements(By.TAG_NAME, "li")  #找到所有網頁tag是li的東西(會存成list形式)
@@ -47,7 +49,7 @@ for i in range(len(total_list)):  #在70秒內成功登入後開始自動跑list
         find_tag_li[k].click()
 
 
-    all_data = driver.find_element(By.XPATH, '//*[@id="wrapper"]/div[1]/div[2]/div[2]/div[2]/div/div[5]/div[2]')  #把大表全部抄下來
+    all_data = driver.find_element(By.XPATH, '/html/body/div[1]/div/div/div[1]/div[2]/div[2]/div[2]/div/div[2]/div[3]/div[3]/div[2]')  #把大表全部抄下來
     all_data_list = all_data.text.split('\n')        #透過split去掉原先的空行間格並轉成list
     print(all_data_list)
 
@@ -68,7 +70,13 @@ for i in range(len(total_list)):  #在70秒內成功登入後開始自動跑list
         elif '補款' in data:        #有補款的則記錄在第二頁資料表
             replenishment = all_data_list[all_data_list.index(data)].replace('）', '')      #把前面某某市場刪掉的處理
             temp_list.append(total_list[i][0])
-            temp_list.append(replenishment[replenishment.index('-') + 1:])
+            try:
+                temp_list.append(replenishment[replenishment.index('_') + 1:])
+            except ValueError:
+                try:
+                    temp_list.append(replenishment[replenishment.index('-') + 1:])
+                except ValueError:
+                    temp_list.append(replenishment)
             temp_list.append(all_data_list[all_data_list.index(data)+1])
             other_payments.append_table(values = temp_list)
     wks.update_value('H' + str(i + 2), Promotions_on_items)  #商品優惠寫入資料表
@@ -77,6 +85,7 @@ for i in range(len(total_list)):  #在70秒內成功登入後開始自動跑list
     wks.update_value('K' + str(i + 2), url)                  #網址寫入資料表
 
 print('對帳完成!')
+
 
 #備份作業
 today = datetime.date.today()                           #查詢今天日期
@@ -95,10 +104,10 @@ print(check_list)
 if str(last_sunday) in check_list:                      #如果上禮拜天不在裡面就新建備份sheet
     pass
 else:
-    res = backup_sht.add_worksheet(str(last_sunday))    #新建名稱為上禮拜天
-    res2 = backup_sht.add_worksheet(str(last_sunday) + '補款')
+    res = backup_sht.add_worksheet(str(last_sunday),  index = 0)    #新建名稱為上禮拜天
+    res2 = backup_sht.add_worksheet(str(last_sunday) + '補款',  index = 1)
     backup_wks = backup_sht.worksheet_by_title(str(last_sunday))
-    total_list2 = wks.get_values('A1','K41')            #將已更新好的資料全部放到備份sheet裡
+    total_list2 = wks.get_values('A1','K45')            #將已更新好的資料全部放到備份sheet裡
     total_list3 = other_payments.get_values('A1','C1000')
     backup_wks.append_table(values = total_list2)
     backup_other_payments = backup_sht.worksheet_by_title(str(last_sunday) + '補款')
@@ -107,9 +116,7 @@ else:
 print('備份完成')
 
 
-
 sleep(600)
-
 
 
 #沒有套迴圈的原程式
